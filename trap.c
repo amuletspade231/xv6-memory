@@ -77,7 +77,23 @@ trap(struct trapframe *tf)
             cpuid(), tf->cs, tf->eip);
     lapiceoi();
     break;
+  case T_PGFLT:// Lab 3: add page fault
+    {
+    struct proc *curproc = myproc();
+    int pgflt_addr = rcr2();
+    int stackEnd = STACKTOP - curproc->stackPages*PGSIZE;
 
+    if (PGROUNDDOWN(pgflt_addr) == PGROUNDDOWN(stackEnd-1)) {
+	if(allocuvm(curproc->pgdir, stackEnd-PGSIZE, stackEnd)==0) {
+ 	    cprintf("case T_PGFLT from trap.c: allocuvm failed. Number of current allocated pages: %d\n", curproc->stackPages);
+ 	    exit();
+ 	} else {
+	    curproc->stackPages += 1;
+	    cprintf("case T_PGFLT from trap.c: allocuvm succeeded. Number of pages allocated: %d\n", curproc->stackPages);
+	}
+    }
+    }
+    break;
   //PAGEBREAK: 13
   default:
     if(myproc() == 0 || (tf->cs&3) == 0){

@@ -322,7 +322,24 @@ copyuvm(pde_t *pgdir, uint sz)
 
   if((d = setupkvm()) == 0)
     return 0;
+  // Lab 3: Copy from the data
   for(i = 0; i < sz; i += PGSIZE){
+    if((pte = walkpgdir(pgdir, (void *) i, 0)) == 0)
+      panic("copyuvm: pte should exist");
+    if(!(*pte & PTE_P))
+      panic("copyuvm: page not present");
+    pa = PTE_ADDR(*pte);
+    flags = PTE_FLAGS(*pte);
+    if((mem = kalloc()) == 0)
+      goto bad;
+    memmove(mem, (char*)P2V(pa), PGSIZE);
+    if(mappages(d, (void*)i, PGSIZE, V2P(mem), flags) < 0)
+      goto bad;
+  }
+  // Lab 3: Copy from the stack
+  uint stackEnd = STACKTOP - PGSIZE*myproc()->stackPages;
+  //for(i = STACKTOP; i < STACKTOP + myproc()->stackPages*PGSIZE; i += PGSIZE){
+  for(i=PGROUNDDOWN(STACKTOP);i>stackEnd;i-=PGSIZE){
     if((pte = walkpgdir(pgdir, (void *) i, 0)) == 0)
       panic("copyuvm: pte should exist");
     if(!(*pte & PTE_P))
